@@ -1,0 +1,9 @@
+{
+  "name": "JHGESTOR - Sistema SaaS",
+  "description": "Uma plataforma completa de gestão empresarial (ERP/SaaS) com módulos de CRM, Kanban, Financeiro, Agenda e Integração com Meta Ads.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
