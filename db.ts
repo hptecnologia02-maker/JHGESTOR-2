@@ -348,17 +348,22 @@ export const api = {
     // 1. Fetch correct owner_id to satisfy RLS
     const { data: uData } = await supabase.from('users').select('owner_id').eq('id', userId).single();
 
-    // CORRECTION: If owner_id is missing in DB, self-assign it immediately to allow RLS to pass
-    let validOwnerId = uData?.owner_id;
-    if (!validOwnerId) {
-      console.warn("API: User missing owner_id, self-correcting...");
-      await supabase.from('users').update({ owner_id: userId }).eq('id', userId);
-      validOwnerId = userId;
-    }
-
+    // CORRECTION: Ensure user exists and has owner_id
+    let validOwnerId = uData?.owner_id || userId;
     const expiry = Date.now() + (3600 * 1000); // 1h
-    await supabase.auth.updateUser({ data: { google_calendar_connected: true, google_access_token: token, google_token_expiry: expiry } });
-    await supabase.from('users').update({ google_calendar_connected: true, google_access_token: token, google_token_expiry: expiry }).eq('id', userId);
+
+    // Update Auth Metadata (always works)
+    await supabase.auth.updateUser({ data: { google_calendar_connected: true, google_access_token: token, google_token_expiry: expiry, owner_id: validOwnerId } });
+
+    // Upsert public.users to guarantee RLS function works (get_my_owner_id relies on this row existing)
+    // We use upsert to create if missing or update if existing
+    await supabase.from('users').upsert({
+      id: userId,
+      owner_id: validOwnerId,
+      google_calendar_connected: true,
+      google_access_token: token,
+      google_token_expiry: expiry
+    }, { onConflict: 'id' });
 
     if (events.length > 0) {
       console.log(`API: Syncing ${events.length} events for user ${userId} (Owner: ${validOwnerId})`);
