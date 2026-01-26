@@ -98,7 +98,7 @@ const CalendarView: React.FC = () => {
       return;
     }
 
-    const GOOGLE_CLIENT_ID = '171329732540-2lqud15qp8mbppo5kkbvn5b6u5nps4fk.apps.googleusercontent.com';
+    const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '171329732540-2lqud15qp8mbppo5kkbvn5b6u5nps4fk.apps.googleusercontent.com';
     setIsLoadingGoogle(true);
     console.log("handleSyncGoogle: Starting Unified Flow...");
 
