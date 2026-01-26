@@ -23,6 +23,12 @@ Para que seu sistema SaaS possa puxar dados do Meta Ads, você precisa criar um 
    - Para teste local, coloque: `http://localhost:5173/`
    - **Importante**: Se for publicar, adicione a URL real depois.
 4. Clique em **Save** e depois em **Continue**. (Pode pular o resto do tutorial do Facebook).
+5. **CRITICO**: Ainda em "Login do Facebook" > **Configurações**:
+   - Ative a opção **"Login com o SDK do JavaScript"** (Login with JavaScript SDK).
+   - Em "Domínios permitidos para o SDK do JavaScript", adicione:
+     - `http://localhost:5173`
+     - `https://jhgestor-2.vercel.app/`
+   - Clique em **Salvar alterações**.
 
 ## Passo 3: Configurar Permissões (Marketing API)
 
