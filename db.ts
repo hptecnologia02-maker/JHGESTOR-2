@@ -347,7 +347,14 @@ export const api = {
   mergeGoogleEvents: async (userId: string, events: any[], token: string, timeMin?: string) => {
     // 1. Fetch correct owner_id to satisfy RLS
     const { data: uData } = await supabase.from('users').select('owner_id').eq('id', userId).single();
-    const validOwnerId = uData?.owner_id || userId;
+
+    // CORRECTION: If owner_id is missing in DB, self-assign it immediately to allow RLS to pass
+    let validOwnerId = uData?.owner_id;
+    if (!validOwnerId) {
+      console.warn("API: User missing owner_id, self-correcting...");
+      await supabase.from('users').update({ owner_id: userId }).eq('id', userId);
+      validOwnerId = userId;
+    }
 
     const expiry = Date.now() + (3600 * 1000); // 1h
     await supabase.auth.updateUser({ data: { google_calendar_connected: true, google_access_token: token, google_token_expiry: expiry } });
