@@ -68,6 +68,12 @@ Para conectar o gerenciador de anúncios:
 8. Em **URIs de Redirecionamento do OAuth Válidos**, adicione:
    `https://jhgestor.vercel.app/`
    `https://jhgestor.vercel.app/ads`
+9. **IMPORTANTE (Correção do Erro JSSDK):**
+   - Na mesma tela, procure a opção **"Login com o SDK do JavaScript"**.
+   - Mude para **SIM**.
+   - Em **"Domínios permitidos para o SDK do JavaScript"**, adicione:
+     `https://jhgestor.vercel.app/`
+   - **Salve as alterações**.
 
 ---
 
