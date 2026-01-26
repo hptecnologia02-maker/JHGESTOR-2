@@ -345,14 +345,25 @@ export const api = {
   },
 
   mergeGoogleEvents: async (userId: string, events: any[], token: string, timeMin?: string) => {
+    // 1. Fetch correct owner_id to satisfy RLS
+    const { data: uData } = await supabase.from('users').select('owner_id').eq('id', userId).single();
+    const validOwnerId = uData?.owner_id || userId;
+
     const expiry = Date.now() + (3600 * 1000); // 1h
     await supabase.auth.updateUser({ data: { google_calendar_connected: true, google_access_token: token, google_token_expiry: expiry } });
     await supabase.from('users').update({ google_calendar_connected: true, google_access_token: token, google_token_expiry: expiry }).eq('id', userId);
 
     if (events.length > 0) {
-      console.log(`API: Syncing ${events.length} events for user ${userId}`);
+      console.log(`API: Syncing ${events.length} events for user ${userId} (Owner: ${validOwnerId})`);
       const formatted = events.map(e => ({
-        owner_id: e.ownerId, user_id: e.userId, title: e.title, start_time: e.start, end_time: e.end, description: e.description, is_google_event: true, google_event_id: e.googleEventId || e.id
+        owner_id: validOwnerId,
+        user_id: userId,
+        title: e.title,
+        start_time: e.start,
+        end_time: e.end,
+        description: e.description,
+        is_google_event: true,
+        google_event_id: e.googleEventId || e.id
       }));
 
       const { error: upsertError } = await supabase.from('events').upsert(formatted, { onConflict: 'google_event_id' });
