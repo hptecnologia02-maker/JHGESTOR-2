@@ -15,7 +15,7 @@ import AdsView from './views/Ads';
 import ChatView from './views/Chat';
 import LoginView from './views/Login';
 import BillingView from './views/Billing';
-import SuppliersView from './views/Suppliers';
+
 import SettingsView from './views/Settings';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -169,7 +169,7 @@ const App: React.FC = () => {
           <Route path="/ads" element={<Layout><AdsView /></Layout>} />
           <Route path="/chat" element={<Layout><ChatView /></Layout>} />
           <Route path="/billing" element={<Layout><BillingView /></Layout>} />
-          <Route path="/suppliers" element={<Layout><SuppliersView /></Layout>} />
+
           <Route path="/settings" element={<Layout><SettingsView /></Layout>} />
           <Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>

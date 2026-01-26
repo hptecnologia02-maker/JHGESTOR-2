@@ -10,14 +10,13 @@ import {
   MessageSquare,
   TrendingUp,
   CreditCard,
-  Truck
 } from 'lucide-react';
 
 export const MENU_ITEMS = [
   { id: 'dashboard', label: 'Painel', icon: <LayoutDashboard size={20} />, roles: ['ADMIN', 'USER'] },
   { id: 'tasks', label: 'Tarefas', icon: <CheckSquare size={20} />, roles: ['ADMIN', 'USER'] },
   { id: 'calendar', label: 'Agenda', icon: <Calendar size={20} />, roles: ['ADMIN', 'USER'] },
-  { id: 'suppliers', label: 'Fornecedores', icon: <Truck size={20} />, roles: ['ADMIN', 'USER'] },
+
   { id: 'clients', label: 'Clientes', icon: <Users size={20} />, roles: ['ADMIN'] },
   { id: 'financial', label: 'Financeiro', icon: <DollarSign size={20} />, roles: ['ADMIN'] },
   { id: 'ads', label: 'Meta Ads', icon: <TrendingUp size={20} />, roles: ['ADMIN', 'USER'] },
