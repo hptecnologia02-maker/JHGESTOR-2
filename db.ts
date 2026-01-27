@@ -122,13 +122,20 @@ export const api = {
   // Auth
   getProfile: async (userId: string): Promise<User | null> => {
     console.log("API: Fetching profile for", userId);
-    const { data: profile, error } = await supabase
+    let { data: profile, error } = await supabase
       .from('users')
       .select('*')
       .eq('id', userId)
       .maybeSingle();
 
     if (error || !profile) return null;
+
+    // SELF-HEALING: If owner_id is missing, fix it immediately
+    if (!profile.owner_id) {
+      console.warn("API: Profile missing owner_id, auto-fixing...", userId);
+      await supabase.from('users').update({ owner_id: userId }).eq('id', userId);
+      profile.owner_id = userId; // Update local copy
+    }
 
     return {
       id: profile.id,
@@ -137,7 +144,7 @@ export const api = {
       role: profile.role,
       status: profile.status,
       plan: profile.plan,
-      ownerId: profile.owner_id || profile.id, // Fallback to itself if owner_id missing
+      ownerId: profile.owner_id,
       googleCalendarConnected: profile.google_calendar_connected,
       googleAccessToken: profile.google_access_token,
       googleTokenExpiry: profile.google_token_expiry
