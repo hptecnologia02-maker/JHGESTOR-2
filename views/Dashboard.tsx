@@ -21,7 +21,10 @@ const SystemHealth: React.FC = () => {
       const { data } = await supabase.from('users').select('owner_id').eq('id', user.id).single();
       if (!data?.owner_id) {
         setStatus('ERROR');
-        setMsg('Sua conta precisa de reparo (Owner ID ausente).');
+        // Show which DB we are connected to
+        const dbUrl = supabase.supabaseUrl;
+        const maskedUrl = dbUrl.replace(/https:\/\/(.*?)\.supabase\.co/, '$1');
+        setMsg(`Conta precisa de reparo. Conectado a: ...${maskedUrl.substring(0, 6)}... (Supabase)`);
       } else {
         setStatus('OK');
         setMsg('Conta operando normalmente.');
@@ -35,13 +38,19 @@ const SystemHealth: React.FC = () => {
   const fixAccount = async () => {
     if (!user) return;
     try {
-      setMsg('Reparando conta...');
-      await supabase.from('users').upsert({ id: user.id, owner_id: user.id, email: user.email });
+      setMsg('Tentando reparo automático...');
+
+      // 1. Try to set owner_id to self
+      const { error } = await supabase.from('users').upsert({ id: user.id, owner_id: user.id, email: user.email });
+
+      if (error) throw error;
+
       await checkHealth();
-      alert('Conta reparada com sucesso! Tente usar o sistema agora.');
+      alert('Conta reparada! O sistema vai recarregar.');
       window.location.reload();
     } catch (e: any) {
-      alert('Falha ao reparar: ' + e.message);
+      console.error(e);
+      alert(`Falha ao reparar: ${e.message || JSON.stringify(e)}. \n\nVocê precisará rodar o SQL manualmente.`);
     }
   };
 
