@@ -118,6 +118,53 @@ export const setSessionUser = (user: User | null) => {
   }
 };
 
+// Resend Configuration
+const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY || '';
+
+const sendTaskEmail = async (to: string, taskTitle: string, description: string, deadline: string) => {
+  if (!RESEND_API_KEY) {
+    console.warn("API: Resend API Key not found. Email notification skipped.");
+    return;
+  }
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${RESEND_API_KEY}`
+      },
+      body: JSON.stringify({
+        from: 'JHGESTOR <onboarding@resend.dev>', // Usando domínio padrão do Resend para teste inicial
+        to: [to],
+        subject: `Nova Tarefa Atribuída: ${taskTitle}`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <h2 style="color: #2563eb; margin-bottom: 20px;">Olá! Você tem uma nova tarefa.</h2>
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+              <p><strong>Tarefa:</strong> ${taskTitle}</p>
+              <p><strong>Prazo:</strong> ${new Date(deadline).toLocaleDateString('pt-BR')}</p>
+              <p><strong>Descrição:</strong> ${description}</p>
+            </div>
+            <p style="color: #64748b; font-size: 14px;">Acesse o sistema JHGESTOR para mais detalhes.</p>
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+            <p style="font-size: 12px; color: #94a3b8; text-align: center;">JHGESTOR - Sistema de Gestão Inteligente</p>
+          </div>
+        `
+      })
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      console.error("API: Resend error", error);
+    } else {
+      console.log("API: Task notification email sent to", to);
+    }
+  } catch (err) {
+    console.error("API: Failed to send email", err);
+  }
+};
+
 export const api = {
   // Auth
   getProfile: async (userId: string): Promise<User | null> => {
@@ -304,7 +351,18 @@ export const api = {
     const { data, error } = await supabase.from('tasks').insert([{
       owner_id: task.ownerId, title: task.title, description: task.description, status: task.status, responsible_id: task.responsibleId, deadline: task.deadline
     }]).select().single();
+
     if (error) throw error;
+
+    // Async trigger email notification
+    if (task.responsibleId) {
+      api.getProfile(task.responsibleId).then(respUser => {
+        if (respUser && respUser.email) {
+          sendTaskEmail(respUser.email, task.title, task.description, task.deadline);
+        }
+      }).catch(err => console.error("API: Error fetching responsible user for email", err));
+    }
+
     return { ...data, ownerId: data.owner_id, responsibleId: data.responsible_id, createdAt: data.created_at, comments: [] } as Task;
   },
 
