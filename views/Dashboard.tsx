@@ -44,8 +44,8 @@ const SystemHealth: React.FC = () => {
         id: user.id,
         owner_id: user.id,
         email: user.email,
-        name: user.name || 'Usuário' // Ensure name is present
-      });
+        name: user.name || 'Usuário'
+      }, { onConflict: 'email' });
 
       if (error) throw error;
 
