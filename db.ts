@@ -396,11 +396,42 @@ export const api = {
       const { error: upsertError } = await supabase.from('events').upsert(formatted, { onConflict: 'google_event_id' });
       if (upsertError) throw upsertError;
 
-      // DELETION SYNC
-      const incomingIds = events.map(e => e.googleEventId || e.id);
-      let deleteQuery = supabase.from('events').delete().eq('user_id', userId).eq('is_google_event', true).not('google_event_id', 'in', `(${incomingIds.join(',')})`);
-      if (timeMin) deleteQuery = deleteQuery.gte('start_time', timeMin);
-      await deleteQuery;
+      // DELETION SYNC - Remove events that were deleted from Google
+      const incomingGoogleIds = events.map(e => e.googleEventId || e.id).filter(id => id);
+      if (incomingGoogleIds.length > 0) {
+        // Delete events that exist in DB but not in incoming Google events
+        let deleteQuery = supabase
+          .from('events')
+          .delete()
+          .eq('user_id', userId)
+          .eq('is_google_event', true);
+
+        // Only delete events within the synced time range
+        if (timeMin) {
+          deleteQuery = deleteQuery.gte('start_time', timeMin);
+        }
+
+        // Filter out events that are NOT in the incoming list
+        // Supabase uses .not().in() for "NOT IN" queries
+        const { error: deleteError } = await deleteQuery.not('google_event_id', 'in', `(${incomingGoogleIds.join(',')})`);
+        if (deleteError) {
+          console.error('Error deleting removed Google events:', deleteError);
+        } else {
+          console.log('Deletion sync completed for user:', userId);
+        }
+      } else {
+        // If no incoming events, delete all Google events for this user in range
+        let deleteAllQuery = supabase
+          .from('events')
+          .delete()
+          .eq('user_id', userId)
+          .eq('is_google_event', true);
+        if (timeMin) {
+          deleteAllQuery = deleteAllQuery.gte('start_time', timeMin);
+        }
+        await deleteAllQuery;
+        console.log('All Google events deleted for user:', userId);
+      }
     }
   },
 
