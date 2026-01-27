@@ -3,7 +3,7 @@ import React from 'react';
 import { useApp } from '../store';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { Users, CheckCircle, TrendingUp, DollarSign, AlertTriangle, RefreshCw } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { supabase, supabaseUrl } from '../supabaseClient';
 
 const SystemHealth: React.FC = () => {
   const { user, refreshData } = useApp();
@@ -22,8 +22,7 @@ const SystemHealth: React.FC = () => {
       if (!data?.owner_id) {
         setStatus('ERROR');
         // Show which DB we are connected to
-        const dbUrl = supabase.supabaseUrl;
-        const maskedUrl = dbUrl.replace(/https:\/\/(.*?)\.supabase\.co/, '$1');
+        const maskedUrl = supabaseUrl.replace(/https:\/\/(.*?)\.supabase\.co/, '$1');
         setMsg(`Conta precisa de reparo. Conectado a: ...${maskedUrl.substring(0, 6)}... (Supabase)`);
       } else {
         setStatus('OK');
