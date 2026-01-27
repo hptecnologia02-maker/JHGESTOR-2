@@ -165,22 +165,30 @@ export const api = {
 
     const authUser = data.user;
 
-    // Auto-Register/Sync public.users record
+    // Prepare user data with self-referencing owner_id
+    const userData = {
+      id: authUser.id,
+      email: authUser.email,
+      name: authUser.user_metadata.name || 'Usuário',
+      role: authUser.user_metadata.role || 'ADMIN',
+      owner_id: authUser.id, // Self-referencing for admin users
+      status: authUser.user_metadata.status || 'ACTIVE',
+      plan: authUser.user_metadata.plan || 'FREE'
+    };
+
+    // Try to upsert the public.users record
+    // Using onConflict to handle both insert and update cases
     const { data: upsertedProfile, error: upsertError } = await supabase
       .from('users')
-      .upsert({
-        id: authUser.id,
-        email: authUser.email,
-        name: authUser.user_metadata.name || 'Usuário',
-        role: authUser.user_metadata.role || 'ADMIN',
-        owner_id: authUser.user_metadata.owner_id || authUser.id,
-        status: authUser.user_metadata.status || 'ACTIVE',
-        plan: authUser.user_metadata.plan || 'FREE'
-      })
+      .upsert(userData, { onConflict: 'id' })
       .select()
       .single();
 
-    if (upsertError) console.error("API: Failed to sync public user record:", upsertError);
+    if (upsertError) {
+      console.error("API: Failed to sync public user record:", upsertError);
+      // Even if upsert fails, we can still return a user based on auth metadata
+      // This allows login to succeed while the profile sync is pending
+    }
 
     const profile = upsertedProfile;
 
@@ -188,16 +196,16 @@ export const api = {
       id: authUser.id,
       name: profile?.name || authUser.user_metadata.name || 'Usuário',
       email: authUser.email || '',
-      role: profile?.role || authUser.user_metadata.role || 'USER',
+      role: profile?.role || authUser.user_metadata.role || 'ADMIN',
       status: profile?.status || authUser.user_metadata.status || 'ACTIVE',
       plan: profile?.plan || authUser.user_metadata.plan || 'FREE',
-      ownerId: profile?.owner_id || authUser.user_metadata.owner_id || authUser.id,
+      ownerId: profile?.owner_id || authUser.id, // Fallback to authUser.id
       googleCalendarConnected: profile?.google_calendar_connected || false,
       googleAccessToken: profile?.google_access_token || null,
       googleTokenExpiry: profile?.google_token_expiry || null
     } as User;
 
-    console.log("API: Login success, unified user established:", user.email);
+    console.log("API: Login success, unified user established:", user.email, "ownerId:", user.ownerId);
     return user;
   },
 

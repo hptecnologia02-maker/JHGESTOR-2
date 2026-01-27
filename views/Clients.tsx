@@ -20,22 +20,32 @@ const ClientsView: React.FC = () => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const data = {
-      ownerId: user?.ownerId || '1',
+      ownerId: user?.ownerId || user?.id || '',
       name: formData.get('name') as string,
       email: formData.get('email') as string,
       phone: formData.get('phone') as string,
       observations: formData.get('observations') as string,
     };
 
-    if (editingClient) {
-      await api.updateClient(editingClient.id, data);
-    } else {
-      await api.addClient(data);
+    if (!data.ownerId) {
+      alert('Erro: Usuário não está logado corretamente. Por favor, faça logout e login novamente.');
+      return;
     }
 
-    setIsModalOpen(false);
-    setEditingClient(null);
-    refreshData();
+    try {
+      if (editingClient) {
+        await api.updateClient(editingClient.id, data);
+      } else {
+        await api.addClient(data);
+      }
+
+      setIsModalOpen(false);
+      setEditingClient(null);
+      refreshData();
+    } catch (err: any) {
+      console.error('Erro ao salvar cliente:', err);
+      alert('Erro ao salvar cliente: ' + (err.message || JSON.stringify(err)));
+    }
   };
 
   const handleDelete = async (id: string) => {
