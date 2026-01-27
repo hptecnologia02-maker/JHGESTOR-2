@@ -2,7 +2,70 @@
 import React from 'react';
 import { useApp } from '../store';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { Users, CheckCircle, TrendingUp, DollarSign } from 'lucide-react';
+import { Users, CheckCircle, TrendingUp, DollarSign, AlertTriangle, RefreshCw } from 'lucide-react';
+import { supabase } from '../supabaseClient';
+
+const SystemHealth: React.FC = () => {
+  const { user, refreshData } = useApp();
+  const [status, setStatus] = React.useState<'LOADING' | 'OK' | 'ERROR'>('LOADING');
+  const [msg, setMsg] = React.useState('');
+
+  React.useEffect(() => {
+    checkHealth();
+  }, [user]);
+
+  const checkHealth = async () => {
+    if (!user) return;
+    setStatus('LOADING');
+    try {
+      const { data } = await supabase.from('users').select('owner_id').eq('id', user.id).single();
+      if (!data?.owner_id) {
+        setStatus('ERROR');
+        setMsg('Sua conta precisa de reparo (Owner ID ausente).');
+      } else {
+        setStatus('OK');
+        setMsg('Conta operando normalmente.');
+      }
+    } catch (e) {
+      setStatus('ERROR');
+      setMsg('Erro ao verificar conta.');
+    }
+  };
+
+  const fixAccount = async () => {
+    if (!user) return;
+    try {
+      setMsg('Reparando conta...');
+      await supabase.from('users').upsert({ id: user.id, owner_id: user.id, email: user.email });
+      await checkHealth();
+      alert('Conta reparada com sucesso! Tente usar o sistema agora.');
+      window.location.reload();
+    } catch (e: any) {
+      alert('Falha ao reparar: ' + e.message);
+    }
+  };
+
+  if (status === 'OK') return null; // Don't show if everything is fine
+
+  return (
+    <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="flex items-center gap-3 text-red-700">
+        <AlertTriangle size={24} />
+        <div>
+          <h4 className="font-bold text-lg">Atenção: Correção Necessária</h4>
+          <p className="text-sm">{msg}</p>
+        </div>
+      </div>
+      <button
+        onClick={fixAccount}
+        className="bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200 flex items-center gap-2"
+      >
+        <RefreshCw size={18} />
+        CORRIGIR MINHA CONTA
+      </button>
+    </div>
+  );
+};
 
 const DashboardView: React.FC = () => {
   const { clients, tasks, transactions, adsMetrics } = useApp();
@@ -24,6 +87,7 @@ const DashboardView: React.FC = () => {
 
   return (
     <div className="space-y-8">
+      <SystemHealth />
       {/* Top Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <StatCard title="Total Clientes" value={clients.length} icon={<Users className="text-blue-500" />} />
