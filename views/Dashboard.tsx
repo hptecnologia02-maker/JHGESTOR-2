@@ -40,7 +40,12 @@ const SystemHealth: React.FC = () => {
       setMsg('Tentando reparo automático...');
 
       // 1. Try to set owner_id to self
-      const { error } = await supabase.from('users').upsert({ id: user.id, owner_id: user.id, email: user.email });
+      const { error } = await supabase.from('users').upsert({
+        id: user.id,
+        owner_id: user.id,
+        email: user.email,
+        name: user.name || 'Usuário' // Ensure name is present
+      });
 
       if (error) throw error;
 
