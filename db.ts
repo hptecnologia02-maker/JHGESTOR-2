@@ -156,12 +156,13 @@ const sendTaskEmail = async (to: string, taskTitle: string, description: string,
 
     if (!res.ok) {
       const error = await res.json();
-      console.error("API: Resend error", error);
+      console.error("API: Resend delivery failure:", error);
     } else {
-      console.log("API: Task notification email sent to", to);
+      const result = await res.json();
+      console.log("API: Task notification e-mail SENT successfully!", result);
     }
   } catch (err) {
-    console.error("API: Failed to send email", err);
+    console.error("API: Critical error during e-mail send attempt:", err);
   }
 };
 
