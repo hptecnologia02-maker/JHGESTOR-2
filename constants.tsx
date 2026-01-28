@@ -33,4 +33,5 @@ export const COLORS = {
 };
 
 // Configurações do Sistema
-export const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID || '748657001200436'; // Use VITE_FACEBOOK_APP_ID in .env
+export const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID || '748657001200436';
+export const WINDOWS_APP_DOWNLOAD_URL = "#"; // Alterar quando subir o .exe
