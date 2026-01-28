@@ -31,23 +31,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const refreshData = async () => {
     console.log("refreshData: Triggered at", new Date().toLocaleTimeString());
+
     if (isRefreshing) {
       console.warn("refreshData: Already refreshing, skipping...");
       return;
     }
 
-    const currentUser = user || getSessionUser();
-    console.log("refreshData: Current User", currentUser);
-
-    if (!currentUser?.ownerId) {
-      console.error("refreshData: Aborted - No ownerId found!");
+    if (!user) {
+      console.log("refreshData: Aborted - No active user session.");
       return;
     }
 
     setIsRefreshing(true);
     try {
-      const currentUserId = currentUser.id;
-      const currentOwnerId = currentUser.ownerId;
+      const currentUserId = user.id;
+      const currentOwnerId = user.ownerId;
       console.log("refreshData: Fetching for OwnerID", currentOwnerId);
 
       const [c, t, tx, ev, m, g, ads, profile] = await Promise.all([
