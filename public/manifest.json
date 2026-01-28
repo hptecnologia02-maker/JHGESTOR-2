@@ -1,0 +1,17 @@
+{
+    "name": "JHGESTOR - Sistema de Gestão",
+    "short_name": "JHGESTOR",
+    "description": "Sistema de Gestão Inteligente para SaaS",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0f172a",
+    "theme_color": "#2563eb",
+    "icons": [
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}
