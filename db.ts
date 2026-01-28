@@ -136,7 +136,7 @@ const sendTaskEmail = async (to: string, taskTitle: string, description: string,
         'Authorization': `Bearer ${RESEND_API_KEY}`
       },
       body: JSON.stringify({
-        from: 'JHGESTOR <onboarding@resend.dev>', // Usando domínio padrão do Resend para teste inicial
+        from: 'JHGESTOR <sistema@jhtecnologia.com.br>', // Usando domínio oficial agora
         to: [to],
         subject: `Nova Tarefa Atribuída: ${taskTitle}`,
         html: `
