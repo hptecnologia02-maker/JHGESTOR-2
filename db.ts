@@ -303,6 +303,13 @@ export const api = {
   },
 
   deleteUser: async (id: string) => {
+    // 1. Unassign tasks where this user is the responsible
+    await supabase.from('tasks').update({ responsible_id: null }).eq('responsible_id', id);
+
+    // 2. Remove events linked to this user
+    await supabase.from('events').delete().eq('user_id', id);
+
+    // 3. Delete the user
     await supabase.from('users').delete().eq('id', id);
   },
 
