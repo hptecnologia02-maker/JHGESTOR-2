@@ -24,8 +24,20 @@
       "public/**/*"
     ],
     "win": {
-      "target": "nsis",
+      "target": [
+        "nsis"
+      ],
       "icon": "public/icon-512.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "uninstallDisplayName": "JHGESTOR",
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "JHGESTOR",
+      "runAfterFinish": true
     }
   },
   "dependencies": {
