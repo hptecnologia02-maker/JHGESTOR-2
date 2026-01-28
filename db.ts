@@ -122,6 +122,7 @@ export const setSessionUser = (user: User | null) => {
 const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY || '';
 
 const sendTaskEmail = async (to: string, taskTitle: string, description: string, deadline: string) => {
+  console.log(`API: Attempting to send task email to: ${to} using key: ${RESEND_API_KEY ? 'Present' : 'MISSING'}`);
   if (!RESEND_API_KEY) {
     console.warn("API: Resend API Key not found. Email notification skipped.");
     return;
@@ -357,11 +358,17 @@ export const api = {
 
     // Async trigger email notification
     if (task.responsibleId) {
+      console.log(`API: Triggering notification for responsible: ${task.responsibleId}`);
       api.getProfile(task.responsibleId).then(respUser => {
         if (respUser && respUser.email) {
+          console.log(`API: Sending email to: ${respUser.email}`);
           sendTaskEmail(respUser.email, task.title, task.description, task.deadline);
+        } else {
+          console.warn(`API: Could not find email for responsible user: ${task.responsibleId}`, respUser);
         }
       }).catch(err => console.error("API: Error fetching responsible user for email", err));
+    } else {
+      console.log("API: No responsibleId provided for task notification.");
     }
 
     return { ...data, ownerId: data.owner_id, responsibleId: data.responsible_id, createdAt: data.created_at, comments: [] } as Task;
