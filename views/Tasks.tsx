@@ -86,7 +86,8 @@ const TasksView: React.FC = () => {
   ];
 
   const handleMoveTask = async (taskId: string, newStatus: TaskStatus) => {
-    await api.updateTask(taskId, { status: newStatus });
+    if (!user?.ownerId) return;
+    await api.updateTask(taskId, user.ownerId, { status: newStatus });
     refreshData();
   };
 
@@ -113,7 +114,8 @@ const TasksView: React.FC = () => {
       userId: user.id,
       userName: user.name,
       content: commentText,
-      attachments: commentAttachments
+      attachments: commentAttachments,
+      ownerId: user.ownerId
     });
     setCommentText('');
     setCommentAttachments([]);
@@ -191,8 +193,8 @@ const TasksView: React.FC = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (confirm('Excluir esta tarefa?')) {
-                              api.deleteTask(task.id);
+                            if (confirm('Excluir esta tarefa?') && user?.ownerId) {
+                              api.deleteTask(task.id, user.ownerId);
                               refreshData();
                             }
                           }}

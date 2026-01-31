@@ -63,8 +63,8 @@ const SettingsView: React.FC = () => {
             alert('Você não pode excluir a si mesmo.');
             return;
         }
-        if (confirm('Tem certeza que deseja remover este usuário? Ele perderá o acesso imediatamente.')) {
-            await api.deleteUser(id);
+        if (confirm('Tem certeza que deseja remover este usuário? Ele perderá o acesso imediatamente.') && currentUser?.ownerId) {
+            await api.deleteUser(id, currentUser.ownerId);
             loadUsers();
         }
     };

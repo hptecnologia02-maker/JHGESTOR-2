@@ -17,6 +17,7 @@ import LoginView from './views/Login';
 import BillingView from './views/Billing';
 
 import SettingsView from './views/Settings';
+import SuperAdminView from './views/SuperAdmin';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, setUser } = useApp();
@@ -28,25 +29,32 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const activePath = location.pathname.substring(1) || 'dashboard';
 
+  const isTrialExpired = user.plan === 'FREE' && user.trialEndsAt && new Date() > new Date(user.trialEndsAt);
+  const isMasterAdmin = user.email === 'admin@jhgestor.com';
+
   // Bloqueio de Acesso
-  if (user.status === 'BLOCKED' && activePath !== 'billing') {
+  if (!isMasterAdmin && (user.status === 'BLOCKED' || user.status === 'PAST_DUE' || isTrialExpired) && activePath !== 'billing') {
     return (
       <div className="h-screen flex items-center justify-center bg-slate-900 p-4 text-center">
         <div className="p-8 md:p-12 bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl border border-red-100 max-w-lg w-full">
           <div className="w-16 h-16 md:w-24 md:h-24 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6 md:mb-8 animate-pulse">
             <ShieldAlert size={window.innerWidth > 768 ? 48 : 32} />
           </div>
-          <h1 className="text-2xl md:text-3xl font-black text-slate-900 mb-4 tracking-tighter">Acesso Suspenso</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-900 mb-4 tracking-tighter">
+            {isTrialExpired ? 'Período de Teste Encerrado' : 'Acesso Suspenso'}
+          </h1>
           <p className="text-sm md:text-base text-gray-500 mb-8 md:mb-10 font-medium leading-relaxed">
-            Detectamos uma pendência na sua assinatura ou o plano foi suspenso manualmente.
-            Para continuar, regularize seu pagamento.
+            {isTrialExpired
+              ? 'Seus 7 dias de teste grátis terminaram. Esperamos que tenha gostado da experiência! Para continuar utilizando o JHGESTOR, escolha um plano abaixo.'
+              : 'Detectamos uma pendência na sua assinatura ou o plano foi suspenso manualmente. Para continuar, regularize seu pagamento.'
+            }
           </p>
           <div className="space-y-3">
             <Link
               to="/billing"
               className="block w-full bg-blue-600 text-white px-6 py-4 md:py-5 rounded-2xl font-black text-base md:text-lg hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-3"
             >
-              <CreditCard size={24} /> Regularizar Agora
+              <CreditCard size={24} /> {isTrialExpired ? 'Escolher Plano' : 'Regularizar Agora'}
             </Link>
             <button
               onClick={() => setUser(null)}
@@ -172,6 +180,7 @@ const App: React.FC = () => {
           <Route path="/billing" element={<Layout><BillingView /></Layout>} />
 
           <Route path="/settings" element={<Layout><SettingsView /></Layout>} />
+          <Route path="/super-admin" element={<Layout><SuperAdminView /></Layout>} />
           <Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>
       </Router>

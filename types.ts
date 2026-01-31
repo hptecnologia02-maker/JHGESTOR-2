@@ -12,7 +12,9 @@ export interface User {
   avatar?: string;
   status: SubscriptionStatus;
   plan: PlanType;
+  trialEndsAt?: string;
   stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
   googleCalendarConnected?: boolean;
   googleAccessToken?: string;
   googleTokenExpiry?: number;
@@ -40,6 +42,7 @@ export interface Attachment {
 
 export interface TaskComment {
   id: string;
+  ownerId: string;
   userId: string;
   userName: string;
   content: string;

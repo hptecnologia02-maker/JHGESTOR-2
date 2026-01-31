@@ -155,9 +155,9 @@ const ChatView: React.FC = () => {
   };
 
   const handleDeleteGroup = async (groupId: string) => {
-    if (confirm('Tem certeza que deseja excluir este grupo? Todas as mensagens serão perdidas.')) {
+    if (confirm('Tem certeza que deseja excluir este grupo? Todas as mensagens serão perdidas.') && user?.ownerId) {
       try {
-        await api.deleteChatGroup(groupId);
+        await api.deleteChatGroup(groupId, user.ownerId);
         if (selectedUserId === groupId) {
           setSelectedUserId('ALL');
         }

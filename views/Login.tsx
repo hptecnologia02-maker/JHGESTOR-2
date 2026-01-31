@@ -67,9 +67,14 @@ const LoginView: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsRegistering(true)}
-              className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${isRegistering ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
+              className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all relative ${isRegistering ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
             >
               Cadastro
+              {isRegistering && (
+                <span className="absolute -top-2 -right-2 bg-green-500 text-white text-[8px] px-2 py-0.5 rounded-full animate-bounce">
+                  7 DIAS GRÁTIS
+                </span>
+              )}
             </button>
           </div>
 

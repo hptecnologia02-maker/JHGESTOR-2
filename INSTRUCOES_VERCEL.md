@@ -17,6 +17,8 @@ No painel do seu projeto na Vercel, vá em **Settings > Environment Variables** 
 | `GEMINI_API_KEY` | *Sua API Key do Google Gemini* | Para IA (se usado) |
 | `VITE_FACEBOOK_APP_ID` | `748657001200436` | ID do App Meta (ou outro se criar novo) |
 | `VITE_GOOGLE_CLIENT_ID` | *Seu Client ID do Google* | Ex: `171...apps.googleusercontent.com` |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | *Sua Chave Pública do Stripe* | Ex: `pk_test_...` |
+| `VITE_SUPABASE_FUNC_URL` | *URL das suas Edge Functions* | Ex: `https://xyz.supabase.co/functions/v1` |
 
 > *Dica: Você pode copiar os valores atuais do arquivo `supabaseClient.ts` e `constants.tsx` antes de subir, ou usar os que já estão funcionando localmente.*
 
@@ -52,31 +54,38 @@ Para que a sincronização de agenda funcione:
 
 ---
 
-## 4. Configurar Meta Ads (Facebook Developers)
+## 5. Configurar Stripe e Edge Functions (Backend)
 
-Para conectar o gerenciador de anúncios:
+Para que os pagamentos e o trial de 7 dias funcionem em produção:
 
-1. Acesse [developers.facebook.com](https://developers.facebook.com/).
-2. Selecione seu App (**JHGestor SaaS**).
-3. No menu lateral, vá em **Configurações > Básico**.
-4. Em **Domínios do Aplicativo**, adicione:
-   `jhgestor.vercel.app`
-5. Role até o final da página. Se houver plataforma "Website", verifique a **URL do Site**.
-   - Mude para: `https://jhgestor.vercel.app/`
-6. **Salve as alterações**.
-7. Vá em **Login do Facebook > Configurações**.
-8. Em **URIs de Redirecionamento do OAuth Válidos**, adicione:
-   `https://jhgestor.vercel.app/`
-   `https://jhgestor.vercel.app/ads`
-9. **IMPORTANTE (Correção do Erro JSSDK):**
-   - Na mesma tela, procure a opção **"Login com o SDK do JavaScript"**.
-   - Mude para **SIM**.
-   - Em **"Domínios permitidos para o SDK do JavaScript"**, adicione:
-     `https://jhgestor.vercel.app/`
-   - **Salve as alterações**.
+1. **Dashboard do Stripe**:
+   - Crie seus produtos (Essencial, Profissional, Corporativo) e copie os **ID do Preço** (ex: `price_123...`).
+   - Obtenha sua **Secret Key** (`sk_test_...`).
+   - Crie um Webhook apontando para `https://xyz.supabase.co/functions/v1/stripe-webhook` e obtenha o **Webhook Secret** (`whsec_...`).
+
+2. **Supabase Edge Functions**:
+   - Use o CLI do Supabase para configurar os segredos:
+     ```bash
+     supabase secrets set STRIPE_SECRET_KEY=sua_sk_aqui
+     supabase secrets set STRIPE_WEBHOOK_SECRET=seu_whsec_aqui
+     supabase secrets set STRIPE_PRO_PRICE_ID=price_id_do_plano_pro
+     supabase secrets set STRIPE_ENTERPRISE_PRICE_ID=price_id_do_plano_ent
+     ```
+   - Faça o deploy das funções:
+     ```bash
+     supabase functions deploy stripe
+     supabase functions deploy stripe-webhook
+     ```
+
+---
+
+## 6. Banco de Dados (Passo Final)
+
+Execute o arquivo [NEW_SUPABASE_SCHEMA.sql](file:///c:/Users/heric/Downloads/jhgestor---sistema-saas/NEW_SUPABASE_SCHEMA.sql) no Editor SQL do Supabase. Ele contém todas as tabelas, RLS e colunas de trial/Stripe necessárias.
 
 ---
 
 ## ✅ Conclusão
 
-Após realizar esses passos, faça um novo **Deploy** na Vercel (ou aguarde o deploy automático do Git) e o sistema estará 100% funcional no novo domínio.
+Após realizar esses passos, faça um novo **Deploy** na Vercel. O JHGESTOR estará 100% pronto para vender assinaturas e gerenciar tenants automaticamente!
+

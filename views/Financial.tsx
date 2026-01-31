@@ -19,8 +19,12 @@ const FinancialView: React.FC = () => {
   const handleAddTransaction = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    if (!user?.ownerId) {
+      alert('Erro: ID do proprietário não encontrado.');
+      return;
+    }
     await api.addTransaction({
-      ownerId: user?.ownerId || '1',
+      ownerId: user.ownerId,
       description: formData.get('description') as string,
       amount: parseFloat(formData.get('amount') as string),
       type: formData.get('type') as 'INCOME' | 'EXPENSE',

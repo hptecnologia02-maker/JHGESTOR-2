@@ -193,6 +193,7 @@ export const api = {
       role: profile.role,
       status: profile.status,
       plan: profile.plan,
+      trialEndsAt: profile.trial_ends_at,
       ownerId: profile.owner_id,
       googleCalendarConnected: profile.google_calendar_connected,
       googleAccessToken: profile.google_access_token,
@@ -231,6 +232,7 @@ export const api = {
         role: manualUser.role,
         status: manualUser.status,
         plan: manualUser.plan,
+        trialEndsAt: manualUser.trial_ends_at,
         ownerId: manualUser.owner_id,
         googleCalendarConnected: manualUser.google_calendar_connected,
         googleAccessToken: manualUser.google_access_token,
@@ -274,6 +276,7 @@ export const api = {
       role: profile?.role || authUser.user_metadata.role || 'ADMIN',
       status: profile?.status || authUser.user_metadata.status || 'ACTIVE',
       plan: profile?.plan || authUser.user_metadata.plan || 'FREE',
+      trialEndsAt: profile?.trial_ends_at || authUser.user_metadata.trial_ends_at,
       ownerId: profile?.owner_id || authUser.id, // Fallback to authUser.id
       googleCalendarConnected: profile?.google_calendar_connected || false,
       googleAccessToken: profile?.google_access_token || null,
@@ -314,36 +317,82 @@ export const api = {
       return { ...data, ownerId: data.owner_id } as User;
     }
 
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+
     const { data, error } = await supabase.auth.signUp({
       email: user.email,
       password: (user as any).password,
-      options: { data: { name: user.name, role: 'ADMIN', status: 'ACTIVE', plan: 'FREE' } }
+      options: {
+        data: {
+          name: user.name,
+          role: 'ADMIN',
+          status: 'ACTIVE',
+          plan: 'FREE',
+          trial_ends_at: trialEndsAt.toISOString()
+        }
+      }
     });
 
     if (error || !data.user) throw error;
     const newOwnerId = data.user.id;
     await supabase.auth.updateUser({ data: { owner_id: newOwnerId } });
-    const mapped = { id: newOwnerId, name: user.name, email: user.email, role: 'ADMIN', ownerId: newOwnerId, status: 'ACTIVE', plan: 'FREE' } as User;
-    await supabase.from('users').upsert({ id: mapped.id, name: mapped.name, email: mapped.email, role: mapped.role, owner_id: mapped.ownerId, status: mapped.status, plan: mapped.plan });
+    const mapped = {
+      id: newOwnerId,
+      name: user.name,
+      email: user.email,
+      role: 'ADMIN',
+      ownerId: newOwnerId,
+      status: 'ACTIVE',
+      plan: 'FREE',
+      trialEndsAt: trialEndsAt.toISOString()
+    } as User;
+    await supabase.from('users').upsert({
+      id: mapped.id,
+      name: mapped.name,
+      email: mapped.email,
+      role: mapped.role,
+      owner_id: mapped.ownerId,
+      status: mapped.status,
+      plan: mapped.plan,
+      trial_ends_at: mapped.trialEndsAt
+    });
     return mapped;
   },
 
-  deleteUser: async (id: string) => {
+  deleteUser: async (id: string, ownerId: string) => {
     // 1. Unassign tasks where this user is the responsible
-    await supabase.from('tasks').update({ responsible_id: null }).eq('responsible_id', id);
+    await supabase.from('tasks').update({ responsible_id: null }).eq('responsible_id', id).eq('owner_id', ownerId);
 
     // 2. Remove events linked to this user
-    await supabase.from('events').delete().eq('user_id', id);
+    await supabase.from('events').delete().eq('user_id', id).eq('owner_id', ownerId);
 
     // 3. Delete the user
-    await supabase.from('users').delete().eq('id', id);
+    await supabase.from('users').delete().eq('id', id).eq('owner_id', ownerId);
   },
 
   updateUserSubscription: async (userId: string, plan: PlanType, status: SubscriptionStatus) => {
     await supabase.from('users').update({ plan, status }).eq('id', userId);
   },
 
+  createCheckoutSession: async (userId: string, plan: PlanType) => {
+    const { data, error } = await supabase.functions.invoke('stripe', {
+      body: { action: 'create-checkout', userId, plan }
+    });
+    if (error) throw error;
+    return data.url;
+  },
+
+  createPortalSession: async (userId: string) => {
+    const { data, error } = await supabase.functions.invoke('stripe', {
+      body: { action: 'create-portal', userId }
+    });
+    if (error) throw error;
+    return data.url;
+  },
+
   processPayment: async (userId: string, amount: number, plan: PlanType) => {
+    // Mantido apenas para compatibilidade legada se necessário
     await supabase.from('users').update({ plan, status: 'ACTIVE' }).eq('id', userId);
   },
 
@@ -363,12 +412,12 @@ export const api = {
     return { ...data, ownerId: data.owner_id, createdAt: data.created_at } as Client;
   },
 
-  updateClient: async (id: string, updates: Partial<Client>) => {
-    await supabase.from('clients').update({ name: updates.name, email: updates.email, phone: updates.phone, observations: updates.observations }).eq('id', id);
+  updateClient: async (id: string, ownerId: string, updates: Partial<Client>) => {
+    await supabase.from('clients').update({ name: updates.name, email: updates.email, phone: updates.phone, observations: updates.observations }).eq('id', id).eq('owner_id', ownerId);
   },
 
-  deleteClient: async (id: string) => {
-    await supabase.from('clients').delete().eq('id', id);
+  deleteClient: async (id: string, ownerId: string) => {
+    await supabase.from('clients').delete().eq('id', id).eq('owner_id', ownerId);
   },
 
   getTasks: async (ownerId?: string) => {
@@ -378,7 +427,7 @@ export const api = {
     if (error) throw error;
     return (data || []).map(t => ({
       ...t, ownerId: t.owner_id, responsibleId: t.responsible_id, createdAt: t.created_at,
-      comments: (t.task_comments || []).map((tc: any) => ({ ...tc, taskId: tc.task_id, userId: tc.user_id, userName: tc.user_name, createdAt: tc.created_at }))
+      comments: (t.task_comments || []).map((tc: any) => ({ ...tc, taskId: tc.task_id, userId: tc.user_id, userName: tc.user_name, createdAt: tc.created_at, ownerId: tc.owner_id }))
     })) as Task[];
   },
 
@@ -407,22 +456,28 @@ export const api = {
     return { ...data, ownerId: data.owner_id, responsibleId: data.responsible_id, createdAt: data.created_at, comments: [] } as Task;
   },
 
-  updateTask: async (id: string, updates: Partial<Task>) => {
+  updateTask: async (id: string, ownerId: string, updates: Partial<Task>) => {
     const fields: any = {};
     if (updates.title) fields.title = updates.title;
     if (updates.description) fields.description = updates.description;
     if (updates.status) fields.status = updates.status;
     if (updates.responsibleId) fields.responsible_id = updates.responsibleId;
     if (updates.deadline) fields.deadline = updates.deadline;
-    await supabase.from('tasks').update(fields).eq('id', id);
+    await supabase.from('tasks').update(fields).eq('id', id).eq('owner_id', ownerId);
   },
 
   addTaskComment: async (taskId: string, comment: Omit<TaskComment, 'id' | 'createdAt'>) => {
-    await supabase.from('task_comments').insert([{ task_id: taskId, user_id: comment.userId, user_name: comment.userName, content: comment.content }]);
+    await supabase.from('task_comments').insert([{
+      task_id: taskId,
+      user_id: comment.userId,
+      user_name: comment.userName,
+      content: comment.content,
+      owner_id: comment.ownerId
+    }]);
   },
 
-  deleteTask: async (id: string) => {
-    await supabase.from('tasks').delete().eq('id', id);
+  deleteTask: async (id: string, ownerId: string) => {
+    await supabase.from('tasks').delete().eq('id', id).eq('owner_id', ownerId);
   },
 
   getTransactions: async (ownerId?: string) => {
@@ -556,8 +611,8 @@ export const api = {
     return { ...data, ownerId: data.owner_id, createdAt: data.created_at } as Supplier;
   },
 
-  deleteSupplier: async (id: string) => {
-    await supabase.from('suppliers').delete().eq('id', id);
+  deleteSupplier: async (id: string, ownerId: string) => {
+    await supabase.from('suppliers').delete().eq('id', id).eq('owner_id', ownerId);
   },
 
   getMessages: async (ownerId?: string): Promise<Message[]> => {
@@ -601,9 +656,9 @@ export const api = {
     return { ...data, ownerId: data.owner_id, createdBy: data.created_by, createdAt: data.created_at } as ChatGroup;
   },
 
-  deleteChatGroup: async (id: string) => {
-    await supabase.from('chat_groups').delete().eq('id', id);
-    await supabase.from('messages').delete().eq('receiver_id', id);
+  deleteChatGroup: async (id: string, ownerId: string) => {
+    await supabase.from('chat_groups').delete().eq('id', id).eq('owner_id', ownerId);
+    await supabase.from('messages').delete().eq('receiver_id', id).eq('owner_id', ownerId);
   },
 
   getAdsMetrics: async (ownerId?: string): Promise<MetaAdsData> => {

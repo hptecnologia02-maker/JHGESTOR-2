@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS users (
   google_calendar_connected BOOLEAN DEFAULT FALSE,
   google_access_token TEXT,
   google_token_expiry BIGINT,
+  stripe_customer_id TEXT,
+  stripe_subscription_id TEXT,
+  trial_ends_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
@@ -59,6 +62,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 CREATE TABLE IF NOT EXISTS task_comments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  owner_id TEXT REFERENCES users(id),
   task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
   user_id TEXT REFERENCES users(id),
   user_name TEXT,
@@ -87,6 +91,16 @@ CREATE TABLE IF NOT EXISTS events (
   description TEXT,
   is_google_event BOOLEAN DEFAULT FALSE,
   google_event_id TEXT UNIQUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS suppliers (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  owner_id TEXT REFERENCES users(id),
+  name TEXT NOT NULL,
+  contact TEXT,
+  email TEXT,
+  category TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
@@ -121,6 +135,40 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 -- =====================================================
+-- 3.5 GARANTIR COLUNAS (Para bancos existentes)
+-- =====================================================
+DO $$ 
+BEGIN 
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='owner_id') THEN 
+    ALTER TABLE users ADD COLUMN owner_id TEXT; 
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='clients' AND column_name='owner_id') THEN 
+    ALTER TABLE clients ADD COLUMN owner_id TEXT; 
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tasks' AND column_name='owner_id') THEN 
+    ALTER TABLE tasks ADD COLUMN owner_id TEXT; 
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='task_comments' AND column_name='owner_id') THEN 
+    ALTER TABLE task_comments ADD COLUMN owner_id TEXT; 
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='transactions' AND column_name='owner_id') THEN 
+    ALTER TABLE transactions ADD COLUMN owner_id TEXT; 
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='events' AND column_name='owner_id') THEN 
+    ALTER TABLE events ADD COLUMN owner_id TEXT; 
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='suppliers' AND column_name='owner_id') THEN 
+    ALTER TABLE suppliers ADD COLUMN owner_id TEXT; 
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='chat_groups' AND column_name='owner_id') THEN 
+    ALTER TABLE chat_groups ADD COLUMN owner_id TEXT; 
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='owner_id') THEN 
+    ALTER TABLE messages ADD COLUMN owner_id TEXT; 
+  END IF;
+END $$;
+
+-- =====================================================
 -- 4. HABILITAR ROW LEVEL SECURITY
 -- =====================================================
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -132,18 +180,21 @@ ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE meta_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
 
 -- =====================================================
 -- 5. POLÍTICAS RLS - TABELA USERS (CORRIGIDAS!)
 -- =====================================================
 
--- SELECT: Ver próprio registro e colegas de equipe
-CREATE POLICY "users_select" ON users 
-  FOR SELECT 
-  USING (
-    id = auth.uid()::text 
-    OR owner_id = get_my_owner_id()
-  );
+-- POLICY: Users can view their own profile, their sub-users, OR if they are the Master Admin
+DROP POLICY IF EXISTS "Users can view their own profile or their sub-users or master admin" ON users;
+CREATE POLICY "Users can view their own profile or their sub-users or master admin"
+ON users FOR SELECT
+USING (
+  auth.uid()::text = id 
+  OR owner_id = (SELECT id FROM users WHERE id = auth.uid()::text) 
+  OR (SELECT email FROM users WHERE id = auth.uid()::text) = 'admin@jhgestor.com'
+);
 
 -- INSERT: Permitir criar próprio registro
 CREATE POLICY "users_insert" ON users 
@@ -175,7 +226,14 @@ CREATE POLICY "tasks_all" ON tasks
 -- TASK COMMENTS
 CREATE POLICY "comments_all" ON task_comments 
   FOR ALL 
-  USING (EXISTS (SELECT 1 FROM tasks WHERE tasks.id = task_comments.task_id AND tasks.owner_id = get_my_owner_id()));
+  USING (owner_id = get_my_owner_id())
+  WITH CHECK (owner_id = get_my_owner_id());
+
+-- SUPPLIERS
+CREATE POLICY "suppliers_all" ON suppliers 
+  FOR ALL 
+  USING (owner_id = get_my_owner_id())
+  WITH CHECK (owner_id = get_my_owner_id());
 
 -- TRANSACTIONS
 CREATE POLICY "transactions_all" ON transactions 

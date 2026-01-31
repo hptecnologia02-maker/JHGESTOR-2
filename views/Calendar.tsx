@@ -140,9 +140,13 @@ const CalendarView: React.FC = () => {
     const date = formData.get('date') as string;
     const time = formData.get('time') as string;
 
+    if (!user?.ownerId) {
+      alert('Erro: ID do proprietário não encontrado.');
+      return;
+    }
     await api.addEvent({
-      ownerId: user?.ownerId || '1',
-      userId: user?.id || '1',
+      ownerId: user.ownerId,
+      userId: user.id,
       title: formData.get('title') as string,
       start: `${date}T${time}:00`,
       end: `${date}T${time}:00`,

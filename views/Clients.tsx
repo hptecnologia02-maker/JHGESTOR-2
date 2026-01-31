@@ -34,7 +34,7 @@ const ClientsView: React.FC = () => {
 
     try {
       if (editingClient) {
-        await api.updateClient(editingClient.id, data);
+        await api.updateClient(editingClient.id, data.ownerId, data);
       } else {
         await api.addClient(data);
       }
@@ -49,8 +49,8 @@ const ClientsView: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este cliente?')) {
-      await api.deleteClient(id);
+    if (confirm('Tem certeza que deseja excluir este cliente?') && user?.ownerId) {
+      await api.deleteClient(id, user.ownerId);
       refreshData();
     }
   };

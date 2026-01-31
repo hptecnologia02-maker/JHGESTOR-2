@@ -10,6 +10,7 @@ import {
   MessageSquare,
   TrendingUp,
   CreditCard,
+  ShieldCheck,
 } from 'lucide-react';
 
 export const MENU_ITEMS = [
@@ -22,6 +23,7 @@ export const MENU_ITEMS = [
   { id: 'ads', label: 'Meta Ads', icon: <TrendingUp size={20} />, roles: ['ADMIN', 'USER'] },
   { id: 'chat', label: 'Chat', icon: <MessageSquare size={20} />, roles: ['ADMIN', 'USER'] },
   { id: 'billing', label: 'Assinatura', icon: <CreditCard size={20} />, roles: ['ADMIN'] },
+  { id: 'super-admin', label: 'Super Admin', icon: <ShieldCheck size={20} />, roles: ['ADMIN'] },
   { id: 'settings', label: 'Configurações', icon: <Settings size={20} />, roles: ['ADMIN', 'USER'] },
 ];
 
@@ -34,3 +36,4 @@ export const COLORS = {
 
 // Configurações do Sistema
 export const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID || '748657001200436';
+export const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_51SvVq669CbcUsEh40i9dG1uQ1ILYLejF5Foz5oKHrEBiKQLWRA4ulcjua33RgUijA6lVK1pPRHmA2u2xieuHIItS00pQajDkbD';

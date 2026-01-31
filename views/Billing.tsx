@@ -24,14 +24,14 @@ const PLANS: Plan[] = [
   {
     id: 'PRO',
     name: 'Profissional',
-    price: 149.90,
+    price: 149.99,
     features: ['Clientes Ilimitados', 'Agenda Google Sync', 'Meta Ads Insights', 'Relatórios PDF'],
     color: 'bg-blue-600'
   },
   {
     id: 'ENTERPRISE',
-    name: 'Corporativo',
-    price: 499.00,
+    name: 'Corporativo (Anual)',
+    price: 1559.88,
     features: ['Tudo do PRO', 'Suporte VIP 24h', 'Backup em Tempo Real', 'Acesso API'],
     color: 'bg-slate-900'
   }
@@ -42,26 +42,39 @@ const BillingView: React.FC = () => {
   const [showCheckout, setShowCheckout] = useState<Plan | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleSimulatedPayment = async () => {
-    if (!showCheckout || !user) return;
+  const handleStripeCheckout = async (plan: Plan) => {
+    if (!user) return;
     setIsProcessing(true);
+    try {
+      const url = await api.createCheckoutSession(user.id, plan.id);
+      window.location.href = url;
+    } catch (err: any) {
+      console.error('Erro ao iniciar checkout:', err);
+      alert('Erro ao iniciar checkout: ' + (err.message || 'Falha na conexão'));
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
-    // Simula delay de gateway (Stripe)
-    await new Promise(r => setTimeout(r, 2000));
-
-    await api.processPayment(user.id, showCheckout.price, showCheckout.id);
-    await refreshData();
-
-    setIsProcessing(false);
-    setShowCheckout(null);
-    alert('Pagamento processado com sucesso! Sua assinatura foi atualizada.');
+  const handleManageSubscription = async () => {
+    if (!user) return;
+    setIsProcessing(true);
+    try {
+      const url = await api.createPortalSession(user.id);
+      window.location.href = url;
+    } catch (err: any) {
+      console.error('Erro ao abrir portal:', err);
+      alert('Erro ao abrir portal: ' + (err.message || 'Falha na conexão'));
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleCancelSubscription = async () => {
     if (!user) return;
     if (confirm('Deseja realmente suspender sua assinatura? Você perderá acesso aos módulos PRO.')) {
-      await api.updateUserSubscription(user.id, 'FREE', 'BLOCKED');
-      await refreshData();
+      // No Stripe real, geralmente redirecionamos para o Portal do Cliente para cancelamento
+      handleManageSubscription();
     }
   };
 
@@ -85,13 +98,16 @@ const BillingView: React.FC = () => {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={handleCancelSubscription}
+            onClick={handleManageSubscription}
             className="px-6 py-3 border rounded-xl text-sm font-bold text-gray-400 hover:text-red-500 transition-colors"
           >
-            Suspender Acesso
+            Sincronizar Assinatura
           </button>
-          <button className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors flex items-center gap-2">
-            <CreditCard size={18} /> Histórico de Faturas
+          <button
+            onClick={handleManageSubscription}
+            className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors flex items-center gap-2"
+          >
+            <CreditCard size={18} /> Gerenciar no Stripe
           </button>
         </div>
       </div>
@@ -117,94 +133,17 @@ const BillingView: React.FC = () => {
               ))}
             </ul>
             <button
-              disabled={user?.plan === plan.id}
-              onClick={() => setShowCheckout(plan)}
+              disabled={user?.plan === plan.id || isProcessing}
+              onClick={() => handleStripeCheckout(plan)}
               className={`w-full py-4 rounded-2xl font-black transition-all ${user?.plan === plan.id ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-100'}`}
             >
-              {user?.plan === plan.id ? 'Plano Atual' : 'Fazer Upgrade'}
+              {isProcessing ? <Loader2 className="animate-spin mx-auto" /> : (user?.plan === plan.id ? 'Plano Atual' : 'Fazer Upgrade')}
             </button>
           </div>
         ))}
       </div>
 
-      {/* Checkout Modal (Simulando Stripe) */}
-      {showCheckout && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in duration-300">
-            {/* Esquerda: Resumo */}
-            <div className="w-full md:w-5/12 bg-slate-900 p-10 text-white flex flex-col">
-              <button onClick={() => setShowCheckout(null)} className="mb-10 text-slate-400 hover:text-white flex items-center gap-2 font-bold text-sm">
-                <X size={20} /> Voltar
-              </button>
-              <div className="flex-1">
-                <p className="text-slate-400 font-black uppercase tracking-[3px] text-xs mb-4">Assinando JHGESTOR</p>
-                <h2 className="text-4xl font-black mb-10 tracking-tighter">Plano {showCheckout.name}</h2>
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center text-xl">
-                    <span className="font-bold opacity-70">Total Hoje</span>
-                    <span className="font-black">R$ {showCheckout.price.toLocaleString('pt-BR')}</span>
-                  </div>
-                  <div className="h-px bg-white/10"></div>
-                  <p className="text-sm opacity-60 leading-relaxed">
-                    A cobrança é mensal e recorrente. Você pode cancelar a qualquer momento diretamente no painel.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest mt-10">
-                <ShieldCheck size={16} className="text-blue-500" /> Checkout Seguro SSL
-              </div>
-            </div>
-
-            {/* Direita: Formulário de Cartão */}
-            <div className="flex-1 p-10 bg-white">
-              <h3 className="text-xl font-black mb-8">Informações de Pagamento</h3>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Número do Cartão</label>
-                  <div className="relative">
-                    <input disabled={isProcessing} className="w-full px-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none transition-all font-mono" placeholder="4444 4444 4444 4444" />
-                    <CreditCard className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Validade</label>
-                    <input disabled={isProcessing} className="w-full px-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none transition-all font-mono" placeholder="MM/AA" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">CVC</label>
-                    <input disabled={isProcessing} className="w-full px-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none transition-all font-mono" placeholder="123" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-black uppercase text-gray-400 tracking-widest mb-2">Nome no Cartão</label>
-                  <input disabled={isProcessing} className="w-full px-4 py-4 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none transition-all uppercase" placeholder="NOME COMO NO CARTÃO" />
-                </div>
-              </div>
-
-              <div className="mt-10">
-                <button
-                  onClick={handleSimulatedPayment}
-                  disabled={isProcessing}
-                  className="w-full bg-[#635BFF] text-white py-5 rounded-3xl font-black text-xl hover:bg-[#5851e0] transition-all shadow-2xl shadow-blue-100 flex items-center justify-center gap-3 disabled:opacity-50"
-                >
-                  {isProcessing ? (
-                    <><Loader2 className="animate-spin" /> Processando...</>
-                  ) : (
-                    <><Lock size={20} /> Assinar com Stripe</>
-                  )}
-                </button>
-                <div className="flex items-center justify-center gap-2 mt-6">
-                  <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">
-                    Powered by
-                  </p>
-                  <span className="text-[#635BFF] font-black text-xs">Stripe</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal Checkout Removido - Redirecionamento Direto para o Stripe */}
     </div>
   );
 };
