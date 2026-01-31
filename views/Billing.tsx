@@ -50,7 +50,9 @@ const BillingView: React.FC = () => {
       window.location.href = url;
     } catch (err: any) {
       console.error('Erro ao iniciar checkout:', err);
-      alert('Erro ao iniciar checkout: ' + (err.message || 'Falha na conexão'));
+      // Tenta pegar a mensagem de erro que eu coloquei no Response da Function
+      const msg = err.context?.json?.error || err.message || 'Falha na conexão';
+      alert(`Erro ao iniciar checkout: ${msg}`);
     } finally {
       setIsProcessing(false);
     }
