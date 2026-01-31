@@ -208,8 +208,34 @@ export const api = {
     });
 
     if (error || !data.user) {
-      console.warn("API: Login failed", error);
-      return null;
+      console.warn("API: Supabase Auth failed, trying fallback for managed users...", error?.message);
+
+      // FALLBACK: Check public.users table for manual users
+      const { data: manualUser, error: manualError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .eq('password', password)
+        .maybeSingle();
+
+      if (manualError || !manualUser) {
+        console.warn("API: Fallback login also failed", manualError);
+        return null;
+      }
+
+      console.log("API: Manual login success for managed user:", email);
+      return {
+        id: manualUser.id,
+        name: manualUser.name,
+        email: manualUser.email,
+        role: manualUser.role,
+        status: manualUser.status,
+        plan: manualUser.plan,
+        ownerId: manualUser.owner_id,
+        googleCalendarConnected: manualUser.google_calendar_connected,
+        googleAccessToken: manualUser.google_access_token,
+        googleTokenExpiry: manualUser.google_token_expiry
+      } as User;
     }
 
     const authUser = data.user;

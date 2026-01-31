@@ -34,4 +34,3 @@ export const COLORS = {
 
 // Configurações do Sistema
 export const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID || '748657001200436';
-export const WINDOWS_APP_DOWNLOAD_URL = "https://drive.google.com/file/d/1x5vkiv-bhyn1x376Vjoy8KTkF_Y1Gv83/view?usp=drive_link";

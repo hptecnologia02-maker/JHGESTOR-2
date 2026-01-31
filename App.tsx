@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './store';
-import { MENU_ITEMS, WINDOWS_APP_DOWNLOAD_URL } from './constants';
-import { LogOut, Menu, X, Bell, User as UserIcon, ShieldAlert, CreditCard, Download } from 'lucide-react';
+import { MENU_ITEMS } from './constants';
+import { LogOut, Menu, X, Bell, User as UserIcon, ShieldAlert, CreditCard } from 'lucide-react';
 
 // Views
 import DashboardView from './views/Dashboard';
@@ -108,15 +108,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </nav>
 
         <div className="p-4 border-t border-slate-800 space-y-1">
-          <a
-            href={WINDOWS_APP_DOWNLOAD_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center w-full p-3 text-blue-400 hover:text-blue-300 transition-colors font-bold text-sm bg-blue-500/10 rounded-xl"
-          >
-            <Download size={20} />
-            {(isSidebarOpen || isMobileMenuOpen) && <span className="ml-3">Baixar App Windows</span>}
-          </a>
 
           <button onClick={() => setUser(null)} className="flex items-center w-full p-3 text-slate-400 hover:text-red-400 transition-colors font-bold text-sm">
             <LogOut size={20} />
